@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include <argparse/argparse.hpp>
 
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
@@ -5,6 +7,8 @@
 #include <SDL3/SDL_main.h>
 
 #include "base_map.h"
+#include <format>
+#include <print>
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -15,6 +19,19 @@ static int texture_height = 0;
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
+
+void print_map(rogueutil::DungeonMap& dmap)
+{
+    // std::stringstream row;
+    for(auto&& [coord, tile] : dmap.cells()) {
+        std::print("{},{} {}\n", coord.x, coord.y, tile);
+        // row << "*";
+        // if(coord.y == dmap.width() - 1) {
+        //     std::cout << row.str() << std::endl;
+        //     row.clear();
+        // }
+    }
+}
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -60,6 +77,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     }
 
     SDL_DestroySurface(surface);  /* done with this, the texture has a copy of the pixels now. */
+
+    rogueutil::DungeonMap dmap{ 5, 7 };
+    for(auto&& [coord, tile] : dmap.cells()) {
+        tile = 10;
+    }
+    print_map(dmap);
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }

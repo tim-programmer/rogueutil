@@ -20,8 +20,7 @@ FetchContent_Declare(SDL3_ttf
 )
 FetchContent_MakeAvailable(SDL3_ttf)
 
-FetchContent_Declare(
-    imgui
+FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.92.9b-docking
     GIT_SHALLOW    TRUE
@@ -67,7 +66,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/imgui.cmake)
 add_executable(autoexplore)
 
 target_sources(autoexplore PRIVATE autoexplore.cpp)
-
+target_compile_options(autoexplore PRIVATE -fconcepts-diagnostics-depth=2)
 target_link_libraries(autoexplore PRIVATE
     SDL3::SDL3-static
     imgui-lib

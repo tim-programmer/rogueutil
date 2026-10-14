@@ -1,8 +1,8 @@
-#include <iterator>
-#include <tuple>
+#include <ranges>
 #include <vector>
 
 namespace rogueutil {
+
 
     class MapBase
     {
@@ -12,71 +12,145 @@ namespace rogueutil {
     private:
     };
 
+    struct Coord
+    {
+        int x;
+        int y;
+    };
+
+    template<typename T>
+    struct CellRef
+    {
+        Coord coord;
+        T& value;
+    };
+
     template<typename T>
     class Map
     {
     public:
-        struct iterator_type
-        {
-            using iterator_category = std::forward_iterator_tag;
-            using value_type = T;
-            using element_type = value_type;
-            using pointer = value_type*;
-            using reference = value_type&;
-            using difference_type = std::ptrdiff_t;
+        class cell_view;
 
-            iterator_type() = default;
-            //explicit iterator_type(T vv) : v(vv) {}
-            explicit iterator_type(Map& mm) : m(mm) {}
-            int x{ 0 };
-            int y{ 0 };
-            Map<T>& m;
-            //std::vector<T>::iterator v;
-            iterator_type& operator++() {
-                if(++x >= m.width_) {
-                    x = 0;
-                    ++y;
-                }
+        explicit Map(std::size_t width, std::size_t height, T default_value)
+            : m_width(width)
+            , m_height(height)
+            , m_cells(width * height, default_value)
+            , m_default_value(default_value)
+        {
+        }
+
+        Map() = default;
+        Map(const Map&) = default;
+        Map(Map&&) = default;
+        Map& operator=(const Map&) = default;
+        Map& operator=(Map&&) = default;
+        auto operator<=>(const Map&) const = default;
+        virtual ~Map() = default;
+
+        int width() const { return m_width; }
+        int height() const { return m_height; }
+
+        T& at(std::size_t x, std::size_t y)
+        {
+            return m_cells[y * m_width + x];
+        }
+
+        const T& at(std::size_t x, std::size_t y) const
+        {
+            return m_cells[y * m_width + x];
+        }
+
+        /// @brief Returns the list of cells that can then be iterated over.
+        /// @return A list of cells and there co-ordinates.
+        /// @code{C++}
+        ///     for (auto&& [coord, value] : map.cells())
+        ///     {
+        ///         const auto [x, y] = coord;
+        ///         value += 1;
+        ///     }
+        /// @endcode
+        cell_view cells()
+        {
+            return cell_view(*this);
+        }
+
+        void clear() { m_cells.clear(); m_cells.resize(m_width * m_height, m_default_value); }
+
+    private:
+        int m_width;
+        int m_height;
+        std::vector<T> m_cells;
+        T m_default_value;
+        int m_world_x{ 0 };
+        int m_world_y{ 0 };
+
+        friend class cell_view;
+    };
+
+
+    template<typename T>
+    class Map<T>::cell_view
+    {
+    public:
+        explicit cell_view(Map& m) : m_map(m) {}
+
+        class iterator
+        {
+        public:
+            using iterator_concept  = std::forward_iterator_tag;
+            using iterator_category = std::forward_iterator_tag;
+            using value_type        = CellRef<T>;
+            using difference_type   = std::ptrdiff_t;
+
+            iterator() = default;
+
+            iterator(Map* map, std::size_t index)
+                : m_index(index)
+                , m_map(map)
+            {
+            }
+
+            value_type operator*()
+            {
+                return CellRef<T>{
+                        Coord{ static_cast<int>(m_index % m_map->m_width), static_cast<int>(m_index / m_map->m_width) },
+                        m_map->m_cells[m_index]
+                    };
+            }
+
+            iterator& operator++()
+            {
+                ++m_index;
                 return *this;
             }
-            iterator_type operator++(int) {
-                iterator_type tmp = *this;
+
+            iterator operator++(int)
+            {
+                auto tmp = *this;
                 ++(*this);
                 return tmp;
             }
-            bool operator==(const iterator_type& rhs) {
-                return x == rhs.x && y == rhs.y;
+
+            friend bool operator==(const iterator& lhs, const iterator& rhs)
+            {
+                return lhs.m_index == rhs.m_index;
             }
-            bool operator!=(const iterator_type& rhs) {
-                return !(this == rhs);
+
+            friend bool operator!=(const iterator& lhs, const iterator& rhs)
+            {
+                return !(lhs == rhs);
             }
-            std::tuple<int, int, T> operator*() const {
-                return std::make_tuple(x, y, m.get(x, y));
-            }
+
+        private:
+            std::size_t m_index{ 0 };
+            Map* m_map{ nullptr };
         };
 
-        Map(int width, int height, T default_value = T(0))
-            : width_(width)
-            , height_(height)
-            , default_value_(default_value)
-        {
-            cells_.resize(width_ * height_, default_value_);
-        }
-        virtual ~Map() {}
-        void clear() { cells_.clear(); cells_.resize(width_ * height_, default_value_); }
-        const T get(int x, int y) const { return cells_[x + y * width_]; }
-        void set(int x, int y, T value) { cells_[x + y * width_] = value; }
+        iterator begin() { return iterator(&m_map, 0); }
+        iterator end() { return iterator(&m_map, m_map.m_cells.size()); }
 
-        static_assert(std::forward_iterator<iterator_type>);
-        iterator_type begin() { return iterator_type{ this }; }
-        iterator_type end() { return iterator_type{ }; }
     private:
-        int world_x_{ 0 };
-        int world_y_{ 0 };
-        int width_{ 0 };
-        int height_{ 0 };
-        T default_value_{ 0 };
-        std::vector<T> cells_;
+        Map& m_map;
     };
 
     class DungeonMap : public Map<unsigned>
@@ -96,15 +170,22 @@ namespace rogueutil {
             VISITED_BIT     = 1u << 18,
         };
         DungeonMap(int width, int height) : Map<unsigned>(width, height, 0) {}
-        virtual ~DungeonMap() {}
-        void setTileType(int x, int y, TileType t) { unsigned value = get(x, y) & ~TILE_TYPE_MASK; value |= t; set(x, y, value); }
-        bool isVisible(int x, int y) const { return (get(x, y) & VISIBLE_BIT) == VISIBLE_BIT; }
-        bool isSeen(int x, int y) const { return (get(x, y) & SEEN_BIT) == SEEN_BIT; }
-        bool isVisited(int x, int y) const { return (get(x, y) & VISITED_BIT) == VISITED_BIT; }
-        void markVisible(int x, int y) { set(x, y, get(x, y) | VISIBLE_BIT); }
-        void markSeen(int x, int y) { set(x, y, get(x, y) | SEEN_BIT); }
-        void markVisited(int x, int y) { set(x, y, get(x, y) | VISITED_BIT); }
-        void clearCell(int x, int y) { set(x, y, 0); }
+
+        DungeonMap() = default;
+        DungeonMap(const DungeonMap&) = default;
+        DungeonMap(DungeonMap&&) = default;
+        DungeonMap& operator=(const DungeonMap&) = default;
+        DungeonMap& operator=(DungeonMap&&) = default;
+        virtual ~DungeonMap() = default;
+
+        void setTileType(int x, int y, TileType t) { auto& value = at(x, y); value = (value & ~TILE_TYPE_MASK) | t; }
+        bool isVisible(int x, int y) const { return (at(x, y) & VISIBLE_BIT) == VISIBLE_BIT; }
+        bool isSeen(int x, int y) const { return (at(x, y) & SEEN_BIT) == SEEN_BIT; }
+        bool isVisited(int x, int y) const { return (at(x, y) & VISITED_BIT) == VISITED_BIT; }
+        void markVisible(int x, int y) { auto& cell = at(x, y); cell |= VISIBLE_BIT; }
+        void markSeen(int x, int y) { auto& cell = at(x, y); cell |= SEEN_BIT; }
+        void markVisited(int x, int y) { auto& cell = at(x, y); cell |= VISITED_BIT; }
+        void clearCell(int x, int y) {  at(x, y) = 0; }
     private:
     };
 

@@ -1,0 +1,81 @@
+{
+    "attack": {
+        "name": "Attack",
+        "description": "A basic melee attack that deals weapon damage if one is equipped. Unarmed damage is dealt if no weapon is equipped.",
+        "icon": "attack-icon",
+        "range": 1,
+        "damage": {
+            "amount": "1d4+2",
+            "type": "physical"
+        },
+        "requires": [ "target" ]
+    },
+    "quick_strike": {
+        "name": "Quick Strike",
+        "description": "A fast, precise melee attack that deals moderate weapon damage. Requires a weapon to use.",
+        "icon": "quick-strike-icon",
+        "cost": {
+            "amount": 5,
+            "type": "stamina"
+        },
+        "cooldown": 150,
+        "range": 1,
+        "damage": {
+            "amount": "weapon",
+            "multiplier": 1.05
+        },
+        "requires": [ "weapon_equipped", "target" ]
+    },
+    "spark": {
+        "name": "Spark",
+        "description": "A quick burst of arcane energy that deals minor damage to a single target.",
+        "icon": "spark-icon",
+        "cost": {
+            "amount": 8,
+            "type": "mana"
+        },
+        "cooldown": 100,
+        "damage": {
+            "amount": "1d4+6",
+            "type": "arcane"
+        },
+        "range": 3,
+        "requires": [ "target" ]
+    },
+    "fireball": {
+        "name": "Fireball",
+        "description": "A ball of fire that explodes upon impact, dealing area damage.",
+        "icon": "fireball-icon",
+        "level": 5,
+        "cost": {
+            "amount": 20,
+            "type": "mana"
+        },
+        "cooldown": 200,
+        "range": 5,
+        "area_of_effect": 2,
+        "damage": {
+            "instant": {
+                "amount": "2d6+5",
+                "type": "fire"
+            },
+            "over_time": {
+                "amount": "1d4",
+                "duration": 200,
+                "type": "fire"
+            }
+        },
+        "velocity" : 0.2,
+        "animations": {
+            "on_cast": "",
+            "on_resolution": ""
+        }
+    },
+    "use_item": {
+        "name": "Use Item",
+        "description": "Use an item from your inventory. The item must be a consumable.",
+        "icon": "use-item-icon",
+        "type": "utility",
+        "requires": [ "consumable" ]
+    }
+}

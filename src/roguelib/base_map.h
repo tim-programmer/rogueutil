@@ -1,4 +1,4 @@
-#include <ranges>
+#include <memory>
 #include <vector>
 
 namespace rogueutil {
@@ -191,4 +191,8 @@ namespace rogueutil {
 
     static_assert(DungeonMap::TileType::TILE_TYPE_MAX <= DungeonMap::TILE_TYPE_MASK, "Maximum number of tile types exceeded.");
 
+    template<typename T>
+    using MapPtr = std::shared_ptr<Map<T>>;
+
+    using DungeonMapPtr = std::shared_ptr<Map<unsigned>>;
 }

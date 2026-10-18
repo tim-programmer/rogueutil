@@ -1,0 +1,25 @@
+name: cmake build
+
+on:
+    workflow_dispatch:
+    push:
+
+env:
+    BUILD_TYPE: Release
+
+jobs:
+    build:
+        defaults:
+            run:
+                shell: bash
+        runs-on: ubuntu-latest
+        
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Configure CMake
+          run: cmake --preset default
+
+        - name: Build
+          run: cmake --build --preset default
